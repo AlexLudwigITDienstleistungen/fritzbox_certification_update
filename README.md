@@ -18,4 +18,4 @@ The password for the certification is defined in line 15.
 Call the script by a python interpreter without any parameters.
 
 ### Error control
-IF any error occurs it will be pastet to the console.
+IF any error occurs it will be pasted to the console.
