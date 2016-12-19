@@ -66,12 +66,16 @@ except:
 	bolError = True
 #Generate certificate response
 if bolError == False:
-	strCertData = "--" + strBoundary + strLF + 'Content-Disposition: form-data; name="sid"' + strLF + strLF + strSid + strLF + "--" + strBoundary + strLF + 'ContentDisposition: form-data; name="BoxCertPassword"' + strLF + strLF + strCertificationPassword + strLF + 'Content-Disposition: form-data; name="BoxCertImportFile"; filename="cert.pem"' + strLF + 'Content-Type: application/octet-stream' + strLF + strLF + strCertification + strCertificationKey + strLF + "--" + strBoundary + "--"
+	strCertData = "--" + strBoundary + strLF + 'Content-Disposition: form-data; name="sid"' + strLF + strLF + strSid + strLF + "--" + strBoundary + strLF + 'ContentDisposition: form-data; name="BoxCertPassword"' + strLF + strLF + strCertificationPassword + strLF + 'Content-Disposition: form-data; name="BoxCertImportFile"; filename="cert.pem"' + strLF + 'Content-Type: application/octet-stream' + strLF + strLF + strCertification + strLF + strCertificationKey + strLF + "--" + strBoundary + "--"
 #Send Certificate to FritzBox
 if bolError == False:
 	try:
 		strCertificationAnswer = requests.post(strCertificationUrl, strCertData, arrHeaders)
-    except:
+		if strCertificationAnswer.status_code == 200:
+			bolError = False
+		else:
+			print("Error while uploading the certificate:" + strLF + strCertificationAnswer.content)
+	except:
 		print("Error while loading the folowing URL:" + strLF + strCertificationUrl)
 #Quit Application
 quit()
