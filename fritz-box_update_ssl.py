@@ -1,16 +1,19 @@
-import urllib
-import md5
+import urllib2
+import ssl
+import hashlib
 import datetime
 import requests
 import io
 import sys
 import os
+import warnings
 
 def Main():
 	#Element declaration
 	strConfigLF = '\r\n'
 	bolError = False
 	bolProcessed = False
+	bolSuppressSslWarning = False
 	strConfigHostname = ''
 	strConfigUsername = ''
 	strConfigPassword = ''
@@ -39,7 +42,12 @@ def Main():
 				for strLine in strConfig:
 					if strConfigProtocoll == '':
 						bolProcessed = False
-					if strLine.lower().startswith('hostname='):
+					if strLine.lower().startswith('suppresssslwarning'):
+						if strLine[strLine.index('=') + 1:len(strLine) - 1] == "true":
+							bolSuppressSslWarning = True
+						else:
+							bolSuppressSslWarning = False
+					elif strLine.lower().startswith('hostname='):
 						strConfigHostname = strLine[strLine.index('=') + 1:len(strLine) - 1]
 					elif strLine.lower().startswith('username='):
 						strConfigUsername = strLine[strLine.index('=') + 1:len(strLine) - 1]
@@ -97,7 +105,8 @@ def Main():
 								WriteLog("ERROR: Protocoll wasn\'t given.", strLogFile)
 							if bolError == False:
 								WriteLog("Change certificate for " + strConfigName, strLogFile)
-								UpdateCertificate(strConfigProtocoll + strConfigHostname + strConfigUrl, strConfigProtocoll + strConfigHostname + strConfigLoginUrlTemplate, strConfigLoginUrlTemplateMiddle, strConfigUsername, strConfigPassword, strConfigLF, strConfigCertificationPath, strConfigCertificationKeyPath, strConfigCertificationPassword, strConfigProtocoll + strConfigHostname + strConfigCertificationUrl, strLogFile)
+								UpdateCertificate(strConfigProtocoll + strConfigHostname + strConfigUrl, bolSuppressSslWarning, strConfigProtocoll + strConfigHostname + strConfigLoginUrlTemplate, strConfigLoginUrlTemplateMiddle, strConfigUsername, strConfigPassword, strConfigLF, strConfigCertificationPath, strConfigCertificationKeyPath, strConfigCertificationPassword, strConfigProtocoll + strConfigHostname + strConfigCertificationUrl, strLogFile)
+								bolSuppressSslWarning = False
 								strConfigHostname = ''
 								strConfigUsername = ''
 								strConfigPassword = ''
@@ -144,13 +153,17 @@ def Main():
 			WriteLog("ERROR: Protocoll wasn\'t given.", strLogFile)
 		if bolError == False:
 			WriteLog("Change certificate for " + strConfigName, strLogFile)
-			UpdateCertificate(strConfigProtocoll + strConfigHostname + strConfigUrl, strConfigProtocoll + strConfigHostname + strConfigLoginUrlTemplate, strConfigLoginUrlTemplateMiddle, strConfigUsername, strConfigPassword, strConfigLF, strConfigCertificationPath, strConfigCertificationKeyPath, strConfigCertificationPassword, strConfigProtocoll + strConfigHostname + strConfigCertificationUrl, strLogFile)
+			UpdateCertificate(strConfigProtocoll + strConfigHostname + strConfigUrl, bolSuppressSslWarning, strConfigProtocoll + strConfigHostname + strConfigLoginUrlTemplate, strConfigLoginUrlTemplateMiddle, strConfigUsername, strConfigPassword, strConfigLF, strConfigCertificationPath, strConfigCertificationKeyPath, strConfigCertificationPassword, strConfigProtocoll + strConfigHostname + strConfigCertificationUrl, strLogFile)
 
-def UpdateCertificate(strUrl, strLoginUrlTemplate, strLoginUrlTemplateMiddle, strUsername, strPassword, strLF, strCertificationPath, strCertificationKeyPath, strCertificationPassword, strCertificationUrl, strLogFile):
+def UpdateCertificate(strUrl, bolSuppressSslWarning, strLoginUrlTemplate, strLoginUrlTemplateMiddle, strUsername, strPassword, strLF, strCertificationPath, strCertificationKeyPath, strCertificationPassword, strCertificationUrl, strLogFile):
 	bolError = False
 	# Get Challenge
 	try:
-		strContent = urllib.urlopen(strUrl).read()
+		strContent = ""
+		if bolSuppressSslWarning:
+			strContent = urllib2.urlopen(strUrl, context=ssl._create_unverified_context()).read()
+		else:
+			strContent = urllib2.urlopen(strUrl).read()
 	except:
 		WriteLog("Error while loading the folowing URL: " + strUrl, strLogFile)
 		bolError = True
@@ -162,7 +175,9 @@ def UpdateCertificate(strUrl, strLoginUrlTemplate, strLoginUrlTemplateMiddle, st
 		bolError = True
 	#Generate MD5 Hash
 	try:
-		strMd5Hash = md5.new((strLoginUrlChallenge + "-" + strPassword).decode('iso-8859-1').encode('utf-16le')).hexdigest().lower()
+		objMd5 = hashlib.md5()
+		objMd5.update((strLoginUrlChallenge + "-" + strPassword).decode('iso-8859-1').encode('utf-16le'))
+		strMd5Hash = objMd5.hexdigest().lower()
 		#Make Login Url
 		strLoginUrl = strLoginUrlTemplate + strUsername + strLoginUrlTemplateMiddle + strLoginUrlChallenge + "-" + strMd5Hash
 	except:
@@ -170,7 +185,11 @@ def UpdateCertificate(strUrl, strLoginUrlTemplate, strLoginUrlTemplateMiddle, st
 		bolError = True
 	#Get Overview Site
 	try:
-		strIndexContent = urllib.urlopen(strLoginUrl).read()
+		strIndexContent = ""
+		if bolSuppressSslWarning:
+			strIndexContent = urllib2.urlopen(strLoginUrl, context=ssl._create_unverified_context()).read()
+		else:
+			strIndexContent = urllib2.urlopen(strLoginUrl).read()
 	except:
 		WriteLog("Error while loading the folowing URL: " + strLoginUrlTemplate, strLogFile)
 		bolError = True
@@ -205,11 +224,17 @@ def UpdateCertificate(strUrl, strLoginUrlTemplate, strLoginUrlTemplateMiddle, st
 	#Send Certificate to FritzBox
 	if bolError == False:
 		try:
-			strCertificationAnswer = requests.post(strCertificationUrl, strCertData, arrHeaders)
+			if bolSuppressSslWarning:
+				warnings.filterwarnings('ignore', 'Unverified HTTPS request')
+				strCertificationAnswer = requests.post(strCertificationUrl, strCertData, arrHeaders, verify=False)
+				warnings.resetwarnings()
+			else:
+				strCertificationAnswer = requests.post(strCertificationUrl, strCertData, arrHeaders, verify=True)
 			if strCertificationAnswer.status_code == 200:
 				bolError = False
+				WriteLog("Certificate has been successfully updated.", strLogFile)
 			else:
-				WriteLog("Error while uploading the certificate: " + strCertificationAnswer.content, strLogFile)
+				WriteLog("Error while uploading the certificate: " + strCertificationAnswer.status_code + " " + strCertificationAnswer.content, strLogFile)
 		except:
 			WriteLog("Error while loading the folowing URL: " + strCertificationUrl, strLogFile)
 	#Quit Application
