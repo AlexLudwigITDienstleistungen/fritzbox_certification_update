@@ -1,7 +1,7 @@
-SSL certification update for AVM FRITZ!Box
+SSL certificate update script for AVM FRITZ!Box
 =================
 
-Software to update the SSL certification of any FRITZ!Box.
+Software to update the SSL certificate of any FRITZ!Box.
 
 
 ### Requirements
@@ -15,7 +15,9 @@ You can configure multiple boxes in the file. Each Box beginns with []. The conf
 
 [FritzBox Name]					- *Name of the box. This will be shown in the logfile.
 
-Protocoll								- *The Protocoll you want to use. HTTP and HTTPS are supported
+Protocoll								- *The Protocoll you want to use. HTTP and HTTPS are supported.
+
+SuppressSslWarning      - True if you don't want to verify the cerfificate for the connection.
 
 Hostname								- *The Hostname or IP Adress of the box. If you are using different Ports you have to add it.
 
@@ -37,7 +39,7 @@ LoginUrlTemplate				- *Url to generate login string. This shouldn't be changed.
 
 LoginUrlTemplateMiddle	- *Url to send the session id to the box. This shouldn't be changed.
 
-CertificationUrl				- *Url to upload the certification files. This shouldn't be changed.
+CertificationUrl				- *Url to upload the certificate files. This shouldn't be changed.
 
 
 ### Usage
@@ -45,4 +47,4 @@ Call the script by a python interpreter with the configfile as first parameter.
 
 
 ### Error control
-IF any error occurs it will be pasted to the console.
+IF any error occurs it will be pasted to the logfile of console if there was no logfile given.
