@@ -43,7 +43,7 @@ CertificationUrl				- *Url to upload the certificate files. This shouldn't be ch
 
 
 ### Usage
-Call the script by a python interpreter with the configfile as first parameter.
+Call the script by a python3 interpreter with the config file as first parameter.
 
 
 ### Error control
