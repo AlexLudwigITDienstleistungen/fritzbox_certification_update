@@ -1,4 +1,3 @@
-import urllib2
 import ssl
 import hashlib
 import datetime
@@ -161,9 +160,9 @@ def UpdateCertificate(strUrl, bolSuppressSslWarning, strLoginUrlTemplate, strLog
 	try:
 		strContent = ""
 		if bolSuppressSslWarning:
-			strContent = urllib2.urlopen(strUrl, context=ssl._create_unverified_context()).read()
+			strContent = requests.get(strUrl, verify=False).text
 		else:
-			strContent = urllib2.urlopen(strUrl).read()
+			strContent = requests.get(strUrl).text
 	except:
 		WriteLog("Error while loading the folowing URL: " + strUrl, strLogFile)
 		bolError = True
@@ -171,12 +170,15 @@ def UpdateCertificate(strUrl, bolSuppressSslWarning, strLoginUrlTemplate, strLog
 	try:
 		strLoginUrlChallenge = strContent[strContent.index("<Challenge>") + 11:strContent.index("<Challenge>") + 19]
 	except:
-		WriteLog("Error while reading challenge from login page.", strLogFile)
-		bolError = True
+		try:
+			strLoginUrlChallenge = strContent[strContent.index("\"challenge\":") +13:strContent.index("\"challenge\":") +21]
+		except:
+			WriteLog("Error while reading challenge from login page.", strLogFile)
+			bolError = True
 	#Generate MD5 Hash
 	try:
 		objMd5 = hashlib.md5()
-		objMd5.update((strLoginUrlChallenge + "-" + strPassword).decode('iso-8859-1').encode('utf-16le'))
+		objMd5.update((strLoginUrlChallenge + "-" + strPassword).encode('utf-16le'))
 		strMd5Hash = objMd5.hexdigest().lower()
 		#Make Login Url
 		strLoginUrl = strLoginUrlTemplate + strUsername + strLoginUrlTemplateMiddle + strLoginUrlChallenge + "-" + strMd5Hash
@@ -187,9 +189,9 @@ def UpdateCertificate(strUrl, bolSuppressSslWarning, strLoginUrlTemplate, strLog
 	try:
 		strIndexContent = ""
 		if bolSuppressSslWarning:
-			strIndexContent = urllib2.urlopen(strLoginUrl, context=ssl._create_unverified_context()).read()
+			strIndexContent = requests.get(strLoginUrl, verify=False).text
 		else:
-			strIndexContent = urllib2.urlopen(strLoginUrl).read()
+			strIndexContent = requests.get(strLoginUrl).text
 	except:
 		WriteLog("Error while loading the folowing URL: " + strLoginUrlTemplate, strLogFile)
 		bolError = True
